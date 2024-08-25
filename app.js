@@ -2,7 +2,7 @@ const express = require("express");
 const validation = require("./validators/datavalidator");
 const model = require("./models/schoolModel");
 const geolib = require("geolib");
-const cors = require('cors');
+const cors = require("cors");
 require("dotenv").config();
 
 const PORT = process.env.PORT || 4000;
@@ -14,7 +14,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/views/index.html");
 });
@@ -23,17 +22,26 @@ app.get("/", (req, res) => {
 
 // POST REQUEST - to add schools
 app.post("/addschool", async (req, res) => {
-  // validating the data
-  const { error, value } = await validation(req.body);
-  if (error)
-    return res.status(400).json({ message: "Please provide valid details" });
-
-  // creating a school table
-  model.create(value, (err, result) => {
-    if (err) throw err;
-    res.status(401).json({ message: "school added successfully" });
-  });
+  try {
+    // validating the data
+    const { error, value } = await validation(req.body);
+    if (error) {
+      return res.status(400).json({ message: "Please provide valid details" });
+    }
+    // creating a school table
+    model.create(value, (err, result) => {
+      if (err) {
+        console.error("Error adding school:", err);
+        return res.status(500).json({ message: "Internal Server Error" });
+      }
+      res.status(201).json({ message: "school added successfully" });
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    res.status(500).json({ message: "Unexpected server error" });
+  }
 });
+
 
 
 
@@ -46,26 +54,30 @@ app.get("/listSchools", async (req, res) => {
   }
 
   // fetches all the schools from the database
-  await model.find((err, results) => {
-    if (err) {
-      console.error("Error executing query:", err.stack);
-      res.status(500).send("Error executing query");
-      return;
-    }
+  try {
+    await model.find((err, results) => {
+      if (err) {
+        console.error("Error executing query:", err.stack);
+        res.status(500).send("Error executing query");
+        return;
+      }
+      // calculating the distance between two points using geolib
+      const sortedSchools = results
+        .map((school) => {
+          const distance = geolib.getDistance(
+            { latitude: lat, longitude: long },
+            { latitude: school.latitude, longitude: school.longitude }
+          );
+          return { ...school, distance };
+        })
+        .sort((a, b) => a.distance - b.distance);
 
-    // calculating the distance between two points using geolib
-    const sortedSchools = results
-      .map((school) => {
-        const distance = geolib.getDistance(
-          { latitude: lat, longitude: long },
-          { latitude: school.latitude, longitude: school.longitude }
-        );
-        return { ...school, distance };
-      })
-      .sort((a, b) => a.distance - b.distance);
-
-    res.json(sortedSchools);
-  });
+      res.json(sortedSchools);
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    res.status(500).json({ message: "Unexpected server error" });
+  }
 });
 
 app.listen(PORT, () => {
