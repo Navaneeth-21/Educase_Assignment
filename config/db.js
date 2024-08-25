@@ -12,10 +12,10 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-pool.getConnection((err,con)=>{
+pool.getConnection((err,conn)=>{
     if(err) console.log(err);
     console.log('Connected Successfully');
-    con.release(); // Release the connection back to the pool
+    // con.release(); // Release the connection back to the pool
 });
 
 
