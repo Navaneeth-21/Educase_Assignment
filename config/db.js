@@ -15,6 +15,7 @@ const pool = mysql.createPool({
 pool.getConnection((err,con)=>{
     if(err) console.log(err);
     console.log('Connected Successfully');
+    con.release(); // Release the connection back to the pool
 });
 
 
