@@ -46,6 +46,9 @@ app.get("/listSchools", async (req, res) => {
   try {
     // Fetches all the schools from the database
     const results = await model.find();
+    if(!results){
+      return res.status(404).json({message:'No Data Found Please add schools'});
+    }
     
     // Calculating the distance between two points using geolib
     const sortedSchools = results
